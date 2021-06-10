@@ -26,10 +26,11 @@ public class eis
 	public static final String CONFIG_TIME = "SSSssmmHHddMMyyyy";
 	
 	public static final String CONFIG_EXTENSION = ".eis";
-	public static final String CONFIG_VERSION = "3.0.0";
+	public static final String CONFIG_VERSION = "3.1.0";
 	public static final String CONFIG_AUTO_KEY_FOLDER_NAME = "0___holder\\";
 	public static final String CONFIG_AUTO_KEY_FILE_EXTENSION = ".autokey";
 	public static final int CONFIG_AUTO_KEY_SIZE = 256;
+	public static final int CONFIG_RANDOM_WIDTH = 512;
 	public static final int CONFIG_BUFFER_SIZE = 65536;
 	
 	public static String configAutoKeyFolderPath = "\\";
@@ -111,11 +112,17 @@ public class eis
 		return getByte(sdf.format(c.getTime()));
 	}
 	
-	//疑似乱数のバイト配列を取得。
-	public static byte[] getRandom(final int SIZE) throws Exception
+	//一つ目の引数から二つ目の引数までの数字から擬似乱数で選び取得。
+	public static int getRandom(final int FRONT, final int REAR) throws Exception
 	{
 		SecureRandom sr = SecureRandom.getInstance(CONFIG_RANDOM);
-		
+		return (FRONT + sr.nextInt(REAR));
+	}
+	
+	//疑似乱数のバイト配列を取得。
+	public static byte[] getSeed(final int SIZE) throws Exception
+	{
+		SecureRandom sr = SecureRandom.getInstance(CONFIG_RANDOM);
 		return sr.generateSeed(SIZE);
 	}
 	
@@ -139,9 +146,9 @@ public class eis
 			FileOutputStream fos = new FileOutputStream(f);
 			BufferedOutputStream bos = new BufferedOutputStream(fos);
 			
-			for(int inLap = 0; inLap < CONFIG_AUTO_KEY_SIZE / getHash(getRandom(1)).length; inLap++)
+			for(int inLap = 0; inLap < CONFIG_AUTO_KEY_SIZE / getHash(getSeed(1)).length; inLap++)
 			{
-				bos.write(getHash(getRandom(CONFIG_AUTO_KEY_SIZE)));
+				bos.write(getHash(getSeed(getRandom(CONFIG_RANDOM_WIDTH, CONFIG_RANDOM_WIDTH))));
 			}
 			bos.flush();
 			bos.close();
@@ -171,14 +178,14 @@ public class eis
 		bos.write(getByte(getFileExtension(fi.getName())));
 		
 		int bufferLimit = -1;
-		int hashCounter = getHash(getRandom(1)).length;
+		int hashCounter = getHash(getSeed(1)).length;
 		byte[] buffer = new byte[CONFIG_BUFFER_SIZE];
 		byte[] cell = new byte[1];
 		while((bufferLimit = bis.read(buffer)) != -1)
 		{
 			for(int lap = 0; lap < bufferLimit; lap++)
 			{
-				if(hashCounter == getHash(getRandom(1)).length)
+				if(hashCounter == getHash(getSeed(1)).length)
 				{
 					configManualKeyFrontHash = getHash(configManualKeyFrontHash);
 					configManualKeyRearHash = getHash(configManualKeyRearHash);
@@ -228,14 +235,14 @@ public class eis
 		BufferedOutputStream bos = new BufferedOutputStream(fos);
 		
 		int bufferLimit = -1;
-		int hashCounter = getHash(getRandom(1)).length;
+		int hashCounter = getHash(getSeed(1)).length;
 		byte[] buffer = new byte[CONFIG_BUFFER_SIZE];
 		byte[] cell = new byte[1];
 		while((bufferLimit = bis.read(buffer)) != -1)
 		{
 			for(int lap = 0; lap < bufferLimit; lap++)
 			{
-				if(hashCounter == getHash(getRandom(1)).length)
+				if(hashCounter == getHash(getSeed(1)).length)
 				{
 					configManualKeyFrontHash = getHash(configManualKeyFrontHash);
 					configManualKeyRearHash = getHash(configManualKeyRearHash);
