@@ -9,6 +9,6 @@
 `bundle_file.cmd`の`manual_key_front`、`manual_key_rear`を編集してください。こちらの二つが手動で設定した鍵となります。
 エクスプローラー上で`encrypt_file.cmd`にファイルやフォルダをD&Dで一括暗号化、`decrypt_file.cmd`では復号化ができます。暗号化されたファイルは`eis`という拡張子の名で出力されます。
 ## 変換の対象となる拡張子。
-`bundle_file.cmd`ファイルに書いてあります。追記すれば増やせられます。
+`bundle_file.cmd`の`import_file_extension`です。こちらを編集すれば対象拡張子を減らしたり、増やしたりできます。
 ## ファイルの出力先。
 `C:\workbench\.eis\`
