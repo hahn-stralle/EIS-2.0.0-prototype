@@ -4,7 +4,7 @@
 こちらのソフトウェアを使用するには、Javaのインストールが必要です。
 ## 使い方。
 初回は自動生成の鍵ファイルが無いので、初回のみkey_generate.cmdをダブルクリックして鍵を自動生成します。同ディレクトリに鍵ファイルが入ったフォルダーのholderが生成されます。
-bundle_file.cmdのmanual_key_front、manual_key_rearの文字列を編集してください。こちらの二つが手動で設定した鍵となります。
+bundle_file.cmdのmanual_key_front、manual_key_rearを編集してください。こちらの二つが手動で設定した鍵となります。
 エクスプローラー上でencrypt_file.cmdにファイルやフォルダをD&Dで一括暗号化、decrypt_file.cmdでは復号化ができます。暗号化されたファイルはEISという拡張子の名で出力されます。
 ## 変換の対象となる拡張子。
 bundle_file.cmdファイルに書いてあります。追記すれば増やせられます。
