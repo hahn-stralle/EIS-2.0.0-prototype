@@ -26,7 +26,7 @@ public class eis
 	public static final String CONFIG_TIME = "SSSssmmHHddMMyyyy";
 	
 	public static final String CONFIG_EXTENSION = ".eis";
-	public static final String CONFIG_VERSION = "3.2.0";
+	public static final String CONFIG_VERSION = "3.2.1";
 	public static final String CONFIG_AUTO_KEY_FOLDER_NAME = "0___holder\\";
 	public static final String CONFIG_AUTO_KEY_FILE_EXTENSION = ".autokey";
 	public static final int CONFIG_AUTO_KEY_SIZE = 256;
@@ -38,12 +38,11 @@ public class eis
 	public static String configExportDirectoryPathEncrypt = "C:\\workbench\\" + CONFIG_EXTENSION + "\\encrypt\\";
 	public static String configExportDirectoryPathDecrypt = "C:\\workbench\\" + CONFIG_EXTENSION + "\\decrypt\\";
 	
-	public static boolean configFormatProgress = false;
 	public static Long configImportFileFullSize = -1L;
+	public static boolean configInitializeProgress = false;
 	public static int configProgressSector = -1;
 	public static int configProgressSectorCounter = 0;
-	public static int configProgressCounter = 0;
-	public static final int CONFIG_PROGRESS_SECTOR_SIZE = 25;
+	public static int configProgressPercent = 0;
 	
 	public static void main(String[] args) throws Exception
 	{
@@ -78,22 +77,24 @@ public class eis
 	}
 	
 	//進捗状況を表示。
-	public static void displayProgress(final File IMPORT_FILE)
+	public static void displayProgress()
 	{
-		if(!configFormatProgress)
+		if(!configInitializeProgress)
 		{
-			configImportFileFullSize = IMPORT_FILE.length();
-			configProgressSector = (int)((configImportFileFullSize / CONFIG_BUFFER_SIZE) / CONFIG_PROGRESS_SECTOR_SIZE);
-			configFormatProgress = true;
-			System.out.print("進捗状況");
+			configProgressSector = (int)(configImportFileFullSize / CONFIG_BUFFER_SIZE / 100);
+			configInitializeProgress = true;
+			System.out.print("進捗状況, 0%");
 		}
-		
-		configProgressSectorCounter++;
-		if(configProgressSector == configProgressSectorCounter)
+		else
 		{
-			configProgressCounter += (100 / CONFIG_PROGRESS_SECTOR_SIZE);
-			configProgressSectorCounter = 0;
-			System.out.print(", " + configProgressCounter + "%");
+			configProgressSectorCounter++;
+			if(configProgressSector != 0 && configProgressSector == configProgressSectorCounter && configProgressPercent != 100)
+			{
+				configProgressPercent++;
+				System.out.print("\r");
+				System.out.print("進捗状況, " + configProgressPercent + "%");
+				configProgressSectorCounter = 0;
+			}
 		}
 	}
 	
@@ -193,6 +194,8 @@ public class eis
 		File fi = new File(IMPORT_FILE_PATH);
 		FileInputStream fis = new FileInputStream(fi);
 		BufferedInputStream bis = new BufferedInputStream(fis);
+		if(fi.getPath().contains(EXPORT_DIRECTORY_PATH + fi.getName()))System.exit(0);
+		configImportFileFullSize = fi.length();
 		
 		final byte[] TIME = getTime();
 		byte[] configManualKeyFrontHash = getArray(TIME, getByte(configManualKeyFront));
@@ -238,14 +241,15 @@ public class eis
 			
 			bos.write(buffer, 0, bufferLimit);
 			bos.flush();
-			displayProgress(fi);
+			displayProgress();
 		}
 		
 		for(int lap = 0; lap < CONFIG_AUTO_KEY_SIZE; lap++)raf[lap].close();
 		bis.close();
 		bos.close();
-		System.out.println();
-		System.out.println("暗号化が完了しました。" + fo.getPath());
+		System.out.print("\r");
+		System.out.println("進捗状況, 100%");
+		System.out.println("暗号化が完了しました。" + fo.getPath() + "に出力。");
 	}
 	
 	//引数のファイルを取得して復号化。
@@ -254,6 +258,8 @@ public class eis
 		File fi = new File(IMPORT_FILE_PATH);
 		FileInputStream fis = new FileInputStream(fi);
 		BufferedInputStream bis = new BufferedInputStream(fis);
+		if(!getFileExtension(fi.getName()).contains(CONFIG_EXTENSION))System.exit(0);
+		configImportFileFullSize = fi.length();
 		
 		final byte[] THROUGH = new byte[(getByte(CONFIG_EXTENSION).length + getByte(CONFIG_VERSION).length)];
 		bis.read(THROUGH);
@@ -301,13 +307,14 @@ public class eis
 			
 			bos.write(buffer, 0, bufferLimit);
 			bos.flush();
-			displayProgress(fi);
+			displayProgress();
 		}
 		
 		for(int lap = 0; lap < CONFIG_AUTO_KEY_SIZE; lap++)raf[lap].close();
 		bis.close();
 		bos.close();
-		System.out.println();
-		System.out.println("復号化が完了しました。" + fo.getPath());
+		System.out.print("\r");
+		System.out.println("進捗状況, 100%");
+		System.out.println("復号化が完了しました。" + fo.getPath() + "に出力。");
 	}
 }

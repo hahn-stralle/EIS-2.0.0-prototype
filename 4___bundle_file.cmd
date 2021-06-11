@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 rem 入力ファイルの対象拡張子一覧です。こちらに書かれなかった拡張子はスルーされ、対象から外れます。
-set import_file_extension=.rar .tar .zip .7z .lzh .txt .eis .exe .flac
+set import_file_extension=.rar .tar .zip .7z .lzh .txt .eis .exe .flac .opus
 
 rem 出力ディレクトリパス。
 set export_directory_path=C:\workbench\.eis\
