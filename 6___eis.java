@@ -16,7 +16,7 @@ import java.util.Calendar;
 
 public class eis
 {
-	//手動で二つ、文字列を入力して鍵を生成。（パスワード的な。）
+	//手動で二つ、文字列を入力して鍵（パスワード）を生成。
 	public static String configManualKeyFront = "jurtsfdeASAw3975449eiefUQasae";
 	public static String configManualKeyRear = "swdFRR8745iuhNNHSDEpo0as123YsueUUi";
 	
@@ -26,17 +26,24 @@ public class eis
 	public static final String CONFIG_TIME = "SSSssmmHHddMMyyyy";
 	
 	public static final String CONFIG_EXTENSION = ".eis";
-	public static final String CONFIG_VERSION = "3.1.0";
+	public static final String CONFIG_VERSION = "3.2.0";
 	public static final String CONFIG_AUTO_KEY_FOLDER_NAME = "0___holder\\";
 	public static final String CONFIG_AUTO_KEY_FILE_EXTENSION = ".autokey";
 	public static final int CONFIG_AUTO_KEY_SIZE = 256;
 	public static final int CONFIG_RANDOM_WIDTH = 512;
-	public static final int CONFIG_BUFFER_SIZE = 65536;
+	public static final int CONFIG_BUFFER_SIZE = 8192;
 	
 	public static String configAutoKeyFolderPath = "\\";
 	public static String configImportFilePath = "c:\\sample.txt";
 	public static String configExportDirectoryPathEncrypt = "C:\\workbench\\" + CONFIG_EXTENSION + "\\encrypt\\";
 	public static String configExportDirectoryPathDecrypt = "C:\\workbench\\" + CONFIG_EXTENSION + "\\decrypt\\";
+	
+	public static boolean configFormatProgress = false;
+	public static Long configImportFileFullSize = -1L;
+	public static int configProgressSector = -1;
+	public static int configProgressSectorCounter = 0;
+	public static int configProgressCounter = 0;
+	public static final int CONFIG_PROGRESS_SECTOR_SIZE = 25;
 	
 	public static void main(String[] args) throws Exception
 	{
@@ -48,6 +55,7 @@ public class eis
 		switch(COMMAND[0])
 		{
 		case "-keygenerate":
+				configAutoKeyFolderPath = COMMAND[1];
 				keyGenerate();
 			break;
 		case "-encrypt":
@@ -66,6 +74,26 @@ public class eis
 				configAutoKeyFolderPath = COMMAND[5] + configAutoKeyFolderPath;
 				deCrypt(configImportFilePath, configExportDirectoryPathDecrypt);
 			break;
+		}
+	}
+	
+	//進捗状況を表示。
+	public static void displayProgress(final File IMPORT_FILE)
+	{
+		if(!configFormatProgress)
+		{
+			configImportFileFullSize = IMPORT_FILE.length();
+			configProgressSector = (int)((configImportFileFullSize / CONFIG_BUFFER_SIZE) / CONFIG_PROGRESS_SECTOR_SIZE);
+			configFormatProgress = true;
+			System.out.print("進捗状況");
+		}
+		
+		configProgressSectorCounter++;
+		if(configProgressSector == configProgressSectorCounter)
+		{
+			configProgressCounter += (100 / CONFIG_PROGRESS_SECTOR_SIZE);
+			configProgressSectorCounter = 0;
+			System.out.print(", " + configProgressCounter + "%");
 		}
 	}
 	
@@ -138,6 +166,7 @@ public class eis
 	//鍵ファイル群を生成。
 	public static void keyGenerate() throws Exception
 	{
+		System.out.println("鍵を自動生成します。");
 		new File(CONFIG_AUTO_KEY_FOLDER_NAME).mkdir();
 		
 		for(int outLap = 0; outLap < CONFIG_AUTO_KEY_SIZE; outLap++)
@@ -152,7 +181,10 @@ public class eis
 			}
 			bos.flush();
 			bos.close();
+			System.out.println(configAutoKeyFolderPath + f.getPath());
 		}
+		
+		System.out.println("鍵の自動生成が完了しました。");
 	}
 	
 	//引数のファイルを取得して暗号化。
@@ -179,34 +211,41 @@ public class eis
 		
 		int bufferLimit = -1;
 		int hashCounter = getHash(getSeed(1)).length;
+		int hashLength = getHash(getSeed(1)).length;
 		byte[] buffer = new byte[CONFIG_BUFFER_SIZE];
 		byte[] cell = new byte[1];
+		RandomAccessFile[] raf = new RandomAccessFile[CONFIG_AUTO_KEY_SIZE];
+		for(int lap = 0; lap < CONFIG_AUTO_KEY_SIZE; lap++)raf[lap] = new RandomAccessFile(configAutoKeyFolderPath + CONFIG_AUTO_KEY_FOLDER_NAME + lap + CONFIG_AUTO_KEY_FILE_EXTENSION, "r");
+		System.out.println(fi.getPath() + "を暗号化中。しばらくお待ち下さい……。");
 		while((bufferLimit = bis.read(buffer)) != -1)
 		{
 			for(int lap = 0; lap < bufferLimit; lap++)
 			{
-				if(hashCounter == getHash(getSeed(1)).length)
+				if(hashCounter == hashLength)
 				{
 					configManualKeyFrontHash = getHash(configManualKeyFrontHash);
 					configManualKeyRearHash = getHash(configManualKeyRearHash);
 					hashCounter = 0;
 				}
 				
-				RandomAccessFile raf = new RandomAccessFile(configAutoKeyFolderPath + CONFIG_AUTO_KEY_FOLDER_NAME + (configManualKeyFrontHash[hashCounter] + 128) + CONFIG_AUTO_KEY_FILE_EXTENSION, "r");
-				raf.seek((configManualKeyRearHash[hashCounter] + 128));
-				raf.read(cell);
-				raf.close();
+				
+				raf[(configManualKeyFrontHash[hashCounter] + 128)].seek((configManualKeyRearHash[hashCounter] + 128));
+				raf[(configManualKeyFrontHash[hashCounter] + 128)].read(cell);
 				
 				buffer[lap] -= cell[0];
 				hashCounter++;
 			}
 			
 			bos.write(buffer, 0, bufferLimit);
+			bos.flush();
+			displayProgress(fi);
 		}
 		
+		for(int lap = 0; lap < CONFIG_AUTO_KEY_SIZE; lap++)raf[lap].close();
 		bis.close();
-		bos.flush();
 		bos.close();
+		System.out.println();
+		System.out.println("暗号化が完了しました。" + fo.getPath());
 	}
 	
 	//引数のファイルを取得して復号化。
@@ -229,40 +268,46 @@ public class eis
 		byte[] configManualKeyRearHash = getArray(TIME, getByte(configManualKeyRear));
 		
 		new File(configExportDirectoryPathDecrypt).mkdirs();
-		System.out.println(EXPORT_DIRECTORY_PATH + getFileName(fi.getName()) + getString(EXPORT_FILE_EXTENSION));
 		File fo = new File(EXPORT_DIRECTORY_PATH + getFileName(fi.getName()) + getString(EXPORT_FILE_EXTENSION));
 		FileOutputStream fos = new FileOutputStream(fo);
 		BufferedOutputStream bos = new BufferedOutputStream(fos);
 		
 		int bufferLimit = -1;
 		int hashCounter = getHash(getSeed(1)).length;
+		int hashLength = getHash(getSeed(1)).length;
 		byte[] buffer = new byte[CONFIG_BUFFER_SIZE];
 		byte[] cell = new byte[1];
+		RandomAccessFile[] raf = new RandomAccessFile[CONFIG_AUTO_KEY_SIZE];
+		for(int lap = 0; lap < CONFIG_AUTO_KEY_SIZE; lap++)raf[lap] = new RandomAccessFile(configAutoKeyFolderPath + CONFIG_AUTO_KEY_FOLDER_NAME + lap + CONFIG_AUTO_KEY_FILE_EXTENSION, "r");
+		System.out.println(fi.getPath() + "を復号中。しばらくお待ち下さい……。");
 		while((bufferLimit = bis.read(buffer)) != -1)
 		{
 			for(int lap = 0; lap < bufferLimit; lap++)
 			{
-				if(hashCounter == getHash(getSeed(1)).length)
+				if(hashCounter == hashLength)
 				{
 					configManualKeyFrontHash = getHash(configManualKeyFrontHash);
 					configManualKeyRearHash = getHash(configManualKeyRearHash);
 					hashCounter = 0;
 				}
 				
-				RandomAccessFile raf = new RandomAccessFile(configAutoKeyFolderPath + CONFIG_AUTO_KEY_FOLDER_NAME + (configManualKeyFrontHash[hashCounter] + 128) + CONFIG_AUTO_KEY_FILE_EXTENSION, "r");
-				raf.seek((configManualKeyRearHash[hashCounter] + 128));
-				raf.read(cell);
-				raf.close();
+				
+				raf[(configManualKeyFrontHash[hashCounter] + 128)].seek((configManualKeyRearHash[hashCounter] + 128));
+				raf[(configManualKeyFrontHash[hashCounter] + 128)].read(cell);
 				
 				buffer[lap] += cell[0];
 				hashCounter++;
 			}
 			
 			bos.write(buffer, 0, bufferLimit);
+			bos.flush();
+			displayProgress(fi);
 		}
 		
+		for(int lap = 0; lap < CONFIG_AUTO_KEY_SIZE; lap++)raf[lap].close();
 		bis.close();
-		bos.flush();
 		bos.close();
+		System.out.println();
+		System.out.println("復号化が完了しました。" + fo.getPath());
 	}
 }

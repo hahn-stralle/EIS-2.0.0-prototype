@@ -1,8 +1,9 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-java -jar %~dp05___eis.jar -keygenerate
+java -jar %~dp05___eis.jar -keygenerate %~dp0
 
 endlocal
+echo.
+pause
 exit /b
