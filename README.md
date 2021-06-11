@@ -16,4 +16,4 @@
 ## 変換の対象となる拡張子。
 `bundle_file.cmd`の`import_file_extension`です。こちらを編集すれば対象の拡張子を減らしたり、増やしたりできます。
 ## ファイルの出力先。
-`C:\workbench\.eis\`
+`C:\workbench\.eis\`に出力されます。`bundle_file.cmd`で変更できます。
