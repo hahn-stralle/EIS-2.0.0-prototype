@@ -12,4 +12,5 @@
 3, `encrypt_file.cmd`へ、ファイル、フォルダをD&Dで一括暗号化。<br>
 4, `decrypt_file.cmd`へ、ファイル、フォルダをD&Dで一括復号化。
 ## ファイルの出力先。
-`C:\workbench\.eis\`に出力されます。`output_directory_path.txt`で変更できます。
+デフォルトでは`C:\workbench\`になっており、そこから`.eis`フォルダが生成され、その中に`encrypt`, `decrypt`フォルダが生成されます。<br>
+`output_directory_path.txt`で変更できます。
