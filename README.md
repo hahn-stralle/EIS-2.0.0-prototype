@@ -6,9 +6,9 @@
 ## 必要なインストール。
 こちらのソフトウェアを使用するには、`Java`のインストールが必要です。
 ## 使い方。
-1, 初回のみ'key_generate.cmd'を起動して鍵を自動生成。<br>
-2, 5つの'manual_key.txt'を編集して好きなことを書いてください。ファイル丸ごと鍵化するので空白、改行何でもありです。<br>
-3, 'encrypt_file.cmd'へ、ファイル、フォルダをD&Dで一括暗号化。<br>
-4, 'decrypt_file.cmd'へ、ファイル、フォルダをD&Dで一括暗号化。
+1, 初回のみ`key_generate.cmd`を起動して鍵を自動生成。<br>
+2, 5つの`manual_key.txt`を編集して好きなことを書いてください。ファイル丸ごと鍵化するので空白、改行何でもありです。<br>
+3, `encrypt_file.cmd`へ、ファイル、フォルダをD&Dで一括暗号化。<br>
+4, `decrypt_file.cmd`へ、ファイル、フォルダをD&Dで一括復号化。
 ## ファイルの出力先。
 `C:\workbench\.eis\`に出力されます。`output_directory_path.txt`で変更できます。
