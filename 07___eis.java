@@ -19,7 +19,7 @@ import java.util.Scanner;
 public class eis
 {
 	final String CONFIG___EIS_FILE_EXTENSION = ".eis";
-	final String CONFIG___EIS_FILE_VERSION = "4.0.0";
+	final String CONFIG___EIS_FILE_VERSION = "4.0.1";
 	String CONFIG___EIS_DIRECTORY_PATH;
 	int CONFIG___HASH_RANGE;
 	
@@ -55,6 +55,16 @@ public class eis
 	int CONFIG___PROGRESS_SECTOR;
 	int CONFIG___PROGRESS_PERCENT = 0;
 	int CONFIG___PROGRESS_COUNTER = 0;
+	
+	//eisファイルなのかチェック。
+	void checkFileEis(final File PARAM___INPUT_FILE) throws Exception
+	{
+		if(!getFileTotalExtension(PARAM___INPUT_FILE.getName()).equals(CONFIG___EIS_FILE_EXTENSION))
+		{
+			System.out.println("eisファイルではないため、復号化をせずにスルーします。");
+			System.exit(0);
+		}
+	}
 	
 	//ファイル、フォルダの存在有無。
 	void fileFolderExistence(final String PARAM___F_TYPE, final File PARAM___OUTPUT_F) throws Exception
@@ -271,9 +281,9 @@ public class eis
 		byte[] outputFileExtension = getCharacterByte(getFileTotalExtension(fi.getName()));
 		byte[] timeStamp = getCurrentTime();
 		
-		String outputFilePath = CONFIG___OUTPUT_DIRECTORY_PATH + CONFIG___OUTPUT_ENCRYPT_DIRECTORY_PATH + getFileName(fi.getName()) + CONFIG___EIS_FILE_EXTENSION;
+		String outputFilePath = CONFIG___OUTPUT_DIRECTORY_PATH + CONFIG___EIS_FILE_EXTENSION + "\\" + CONFIG___OUTPUT_ENCRYPT_DIRECTORY_PATH + getFileName(fi.getName()) + CONFIG___EIS_FILE_EXTENSION;
 		File fo = new File(outputFilePath);
-		new File(CONFIG___OUTPUT_DIRECTORY_PATH + CONFIG___OUTPUT_ENCRYPT_DIRECTORY_PATH).mkdirs();
+		new File(CONFIG___OUTPUT_DIRECTORY_PATH + CONFIG___EIS_FILE_EXTENSION + "\\" + CONFIG___OUTPUT_ENCRYPT_DIRECTORY_PATH).mkdirs();
 		System.out.println(fi.getPath() + "を暗号化しています。");
 		fileFolderExistence("file", fo);
 		FileOutputStream fos = new FileOutputStream(fo);
@@ -360,10 +370,11 @@ public class eis
 		bis.read(outputFileExtension);
 		bis.read(timeStamp);
 		
-		String outputFilePath = CONFIG___OUTPUT_DIRECTORY_PATH + CONFIG___OUTPUT_DECRYPT_DIRECTORY_PATH + getFileName(fi.getName()) + getCharacterString(outputFileExtension);
+		String outputFilePath = CONFIG___OUTPUT_DIRECTORY_PATH + CONFIG___EIS_FILE_EXTENSION + "\\" + CONFIG___OUTPUT_DECRYPT_DIRECTORY_PATH + getFileName(fi.getName()) + getCharacterString(outputFileExtension);
 		File fo = new File(outputFilePath);
-		new File(CONFIG___OUTPUT_DIRECTORY_PATH + CONFIG___OUTPUT_DECRYPT_DIRECTORY_PATH).mkdirs();
+		new File(CONFIG___OUTPUT_DIRECTORY_PATH + CONFIG___EIS_FILE_EXTENSION + "\\" + CONFIG___OUTPUT_DECRYPT_DIRECTORY_PATH).mkdirs();
 		System.out.println(fi.getPath() + "を復号化しています。");
+		checkFileEis(fi);
 		fileFolderExistence("file", fo);
 		FileOutputStream fos = new FileOutputStream(fo);
 		BufferedOutputStream bos = new BufferedOutputStream(fos);
