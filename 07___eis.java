@@ -65,11 +65,11 @@ public class eis
 		{
 			if(PARAM___F_TYPE.equals("file"))
 			{
-				System.out.println("出力先にファイルが既に存在しています。上書きしますか？（y=はい。y以外の文字=いいえ。）>");
+				System.out.print("出力先にファイルが既に存在しています。上書きしますか？（y=はい。y以外の文字=いいえ。）>");
 			}
 			else
 			{
-				System.out.println("出力先にフォルダが既に存在しています。上書きしますか？過去の暗号ファイルは復号化できなくなります。（y=はい。y以外の文字=いいえ。）>");
+				System.out.print("出力先にフォルダが既に存在しています。上書きしますか？過去の暗号ファイルは復号化できなくなります。（y=はい。y以外の文字=いいえ。）>");
 			}
 			
 			if(!s.next().equals("y"))
@@ -314,7 +314,7 @@ public class eis
 				pickRearNumber = 0;
 				if(manualKeyHash[1][hashCounter] < 0)pickFrontNumber = 256;
 				if(manualKeyHash[2][hashCounter] < 0)pickRearNumber = 256;
-				readBuffer[byteLap] += CONFIG___AUTOMATIC_KEY_DATA[manualKeyHash[3][hashCounter] + 128 + pickFrontNumber][manualKeyHash[4][hashCounter] + 128 + pickFrontNumber];
+				readBuffer[byteLap] += CONFIG___AUTOMATIC_KEY_DATA[manualKeyHash[3][hashCounter] + 128 + pickFrontNumber][manualKeyHash[4][hashCounter] + 128 + pickRearNumber];
 				
 				hashCounter++;
 			}
@@ -397,7 +397,7 @@ public class eis
 				pickRearNumber = 0;
 				if(manualKeyHash[1][hashCounter] < 0)pickFrontNumber = 256;
 				if(manualKeyHash[2][hashCounter] < 0)pickRearNumber = 256;
-				readBuffer[byteLap] -= CONFIG___AUTOMATIC_KEY_DATA[manualKeyHash[3][hashCounter] + 128 + pickFrontNumber][manualKeyHash[4][hashCounter] + 128 + pickFrontNumber];
+				readBuffer[byteLap] -= CONFIG___AUTOMATIC_KEY_DATA[manualKeyHash[3][hashCounter] + 128 + pickFrontNumber][manualKeyHash[4][hashCounter] + 128 + pickRearNumber];
 				
 				hashCounter++;
 			}
