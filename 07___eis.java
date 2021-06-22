@@ -21,7 +21,7 @@ import java.util.Scanner;
 public class eis
 {
 	final String CONFIG___EIS_FILE_EXTENSION = ".eis";
-	final String CONFIG___EIS_FILE_VERSION = "4.0.2";
+	final String CONFIG___EIS_FILE_VERSION = "4.1.0";
 	String CONFIG___EIS_DIRECTORY_PATH;
 	int CONFIG___HASH_RANGE;
 	
