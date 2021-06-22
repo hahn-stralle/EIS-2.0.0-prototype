@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -13,13 +14,14 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Scanner;
 
 public class eis
 {
 	final String CONFIG___EIS_FILE_EXTENSION = ".eis";
-	final String CONFIG___EIS_FILE_VERSION = "4.0.1";
+	final String CONFIG___EIS_FILE_VERSION = "4.0.2";
 	String CONFIG___EIS_DIRECTORY_PATH;
 	int CONFIG___HASH_RANGE;
 	
@@ -56,6 +58,24 @@ public class eis
 	int CONFIG___PROGRESS_PERCENT = 0;
 	int CONFIG___PROGRESS_COUNTER = 0;
 	
+	final int CONFIG___CHECKSUM_SIZE = 25;
+	
+	//ファイルの復号化がちゃんと出来ているのかチェックサム値で照合。
+	void verifyCheckSum(final byte[] PARAM___ORIGIN_CHECKSUM, final byte[] PARAM___CURRENT_CHECKSUM) throws Exception
+	{
+		System.out.println("暗号化前のチェックサム値: " + getThirtySixCharacter(PARAM___ORIGIN_CHECKSUM));
+		System.out.println("復号化後のチェックサム値: " + getThirtySixCharacter(PARAM___CURRENT_CHECKSUM));
+		
+		if(Arrays.equals(PARAM___ORIGIN_CHECKSUM, PARAM___CURRENT_CHECKSUM))
+		{
+			System.out.println("二つのチェックサム値が一致。完全な復号化に成功しました。");
+		}
+		else
+		{
+			System.out.println("二つのチェックサム値が不一致。完全な復号化に失敗しました。");
+		}
+	}
+	
 	//eisファイルなのかチェック。
 	void checkFileEis(final File PARAM___INPUT_FILE) throws Exception
 	{
@@ -88,6 +108,24 @@ public class eis
 				System.exit(0);
 			}
 		}
+	}
+	
+	//バイト配列を数字とアルファベットに変換して返します。
+	String getThirtySixCharacter(final byte[] PARAM___BYTE_ARRAY) throws Exception
+	{
+		String result = "";
+		String characterCode = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		byte[] hash = getHash(PARAM___BYTE_ARRAY);
+		int calc = 0;
+		
+		for(int byteLap = 0; byteLap < hash.length / 2; byteLap++)
+		{
+			calc = 512 + hash[byteLap] + hash[byteLap + 1];
+			calc = calc % characterCode.length();
+			result += characterCode.substring(calc, calc + 1);
+		}
+		
+		return result;
 	}
 	
 	//拡張子無しのファイル名取得。
@@ -251,7 +289,7 @@ public class eis
 	{
 		CONFIG___PROGRESS_COUNTER++;
 		
-		if(CONFIG___PROGRESS_SECTOR != 0 && CONFIG___PROGRESS_COUNTER == CONFIG___PROGRESS_SECTOR && CONFIG___PROGRESS_DIVIDE != CONFIG___PROGRESS_DIVIDE - 1)
+		if(CONFIG___PROGRESS_SECTOR != 0 && CONFIG___PROGRESS_COUNTER == CONFIG___PROGRESS_SECTOR && CONFIG___PROGRESS_PERCENT < CONFIG___PROGRESS_DIVIDE)
 		{
 			CONFIG___PROGRESS_PERCENT++;
 			System.out.print("\r進捗状況, " + String.format("%03d", CONFIG___PROGRESS_PERCENT) + "%");
@@ -262,7 +300,6 @@ public class eis
 	//ファイルを暗号化
 	void enCrypt() throws Exception
 	{
-		byte[][] automaticKeyHash = CONFIG___AUTOMATIC_KEY_DATA;
 		byte[][] manualKeyHash = CONFIG___MANUAL_KEY_DATA;
 		byte[] readBuffer = new byte[CONFIG___INPUT_FILE_LAP_BUFFER_SIZE];
 		int readBufferLimit = -1;
@@ -270,6 +307,7 @@ public class eis
 		
 		int pickFrontNumber = 0;
 		int pickRearNumber = 0;
+		int checkSumCounter = 0;
 		
 		File fi = new File(CONFIG___INPUT_FILE_PATH);
 		FileInputStream fis = new FileInputStream(fi);
@@ -280,6 +318,7 @@ public class eis
 		byte outputFileExtensionRange = (byte)getFileTotalExtension(fi.getName()).length();
 		byte[] outputFileExtension = getCharacterByte(getFileTotalExtension(fi.getName()));
 		byte[] timeStamp = getCurrentTime();
+		byte[] checkSum = new byte[CONFIG___CHECKSUM_SIZE];
 		
 		String outputFilePath = CONFIG___OUTPUT_DIRECTORY_PATH + CONFIG___EIS_FILE_EXTENSION + "\\" + CONFIG___OUTPUT_ENCRYPT_DIRECTORY_PATH + getFileName(fi.getName()) + CONFIG___EIS_FILE_EXTENSION;
 		File fo = new File(outputFilePath);
@@ -294,6 +333,7 @@ public class eis
 		bos.write(outputFileExtensionRange);
 		bos.write(outputFileExtension);
 		bos.write(timeStamp);
+		bos.write(checkSum);
 		
 		//-------------------------*****-------------------------
 		
@@ -320,13 +360,21 @@ public class eis
 					hashCounter = 0;
 				}
 				
+				if(checkSumCounter == CONFIG___CHECKSUM_SIZE)
+				{
+					checkSumCounter = 0;
+				}
+				
+				if(byteLap < readBufferLimit)checkSum[checkSumCounter] += readBuffer[byteLap];
+				
 				pickFrontNumber = 0;
 				pickRearNumber = 0;
 				if(manualKeyHash[1][hashCounter] < 0)pickFrontNumber = 256;
 				if(manualKeyHash[2][hashCounter] < 0)pickRearNumber = 256;
-				readBuffer[byteLap] += CONFIG___AUTOMATIC_KEY_DATA[manualKeyHash[3][hashCounter] + 128 + pickFrontNumber][manualKeyHash[4][hashCounter] + 128 + pickRearNumber];
+				readBuffer[byteLap] -= CONFIG___AUTOMATIC_KEY_DATA[manualKeyHash[3][hashCounter] + 128 + pickFrontNumber][manualKeyHash[4][hashCounter] + 128 + pickRearNumber];
 				
 				hashCounter++;
+				checkSumCounter++;
 			}
 			
 			bos.write(readBuffer, 0, readBufferLimit);
@@ -337,6 +385,15 @@ public class eis
 		bis.close();
 		bos.close();
 		
+		RandomAccessFile raf = new RandomAccessFile(outputFilePath, "rw");
+		raf.seek(raf.getFilePointer() + eisExtension.length);
+		raf.seek(raf.getFilePointer() + eisVersion.length);
+		raf.seek(raf.getFilePointer() + 1);
+		raf.seek(raf.getFilePointer() + outputFileExtension.length);
+		raf.seek(raf.getFilePointer() + timeStamp.length);
+		raf.write(checkSum);
+		raf.close();
+		
 		System.out.print("\r進捗状況, 100%");
 		System.out.println("\r暗号化が完了しました。" + fo.getPath());
 	}
@@ -344,7 +401,6 @@ public class eis
 	//ファイルを復号化
 	void deCrypt() throws Exception
 	{
-		byte[][] automaticKeyHash = CONFIG___AUTOMATIC_KEY_DATA;
 		byte[][] manualKeyHash = CONFIG___MANUAL_KEY_DATA;
 		byte[] readBuffer = new byte[CONFIG___INPUT_FILE_LAP_BUFFER_SIZE];
 		int readBufferLimit = -1;
@@ -352,12 +408,15 @@ public class eis
 		
 		int pickFrontNumber = 0;
 		int pickRearNumber = 0;
+		int checkSumCounter = 0;
 		
 		byte[] eisExtension = getCharacterByte(CONFIG___EIS_FILE_EXTENSION);
 		byte[] eisVersion = getCharacterByte(CONFIG___EIS_FILE_VERSION);
 		byte[] outputFileExtensionRange = new byte[1];
 		byte[] outputFileExtension;
 		byte[] timeStamp = getCurrentTime();
+		byte[] originCheckSum = new byte[CONFIG___CHECKSUM_SIZE];
+		byte[] currentCheckSum = new byte[CONFIG___CHECKSUM_SIZE];
 		
 		File fi = new File(CONFIG___INPUT_FILE_PATH);
 		FileInputStream fis = new FileInputStream(fi);
@@ -369,6 +428,7 @@ public class eis
 		outputFileExtension = new byte[getCharacterByte(".").length * outputFileExtensionRange[0]];
 		bis.read(outputFileExtension);
 		bis.read(timeStamp);
+		bis.read(originCheckSum);
 		
 		String outputFilePath = CONFIG___OUTPUT_DIRECTORY_PATH + CONFIG___EIS_FILE_EXTENSION + "\\" + CONFIG___OUTPUT_DECRYPT_DIRECTORY_PATH + getFileName(fi.getName()) + getCharacterString(outputFileExtension);
 		File fo = new File(outputFilePath);
@@ -404,13 +464,21 @@ public class eis
 					hashCounter = 0;
 				}
 				
+				if(checkSumCounter == CONFIG___CHECKSUM_SIZE)
+				{
+					checkSumCounter = 0;
+				}
+				
 				pickFrontNumber = 0;
 				pickRearNumber = 0;
 				if(manualKeyHash[1][hashCounter] < 0)pickFrontNumber = 256;
 				if(manualKeyHash[2][hashCounter] < 0)pickRearNumber = 256;
-				readBuffer[byteLap] -= CONFIG___AUTOMATIC_KEY_DATA[manualKeyHash[3][hashCounter] + 128 + pickFrontNumber][manualKeyHash[4][hashCounter] + 128 + pickRearNumber];
+				readBuffer[byteLap] += CONFIG___AUTOMATIC_KEY_DATA[manualKeyHash[3][hashCounter] + 128 + pickFrontNumber][manualKeyHash[4][hashCounter] + 128 + pickRearNumber];
+				
+				if(byteLap < readBufferLimit)currentCheckSum[checkSumCounter] += readBuffer[byteLap];
 				
 				hashCounter++;
+				checkSumCounter++;
 			}
 			
 			bos.write(readBuffer, 0, readBufferLimit);
@@ -423,5 +491,6 @@ public class eis
 		
 		System.out.print("\r進捗状況, 100%");
 		System.out.println("\r復号化が完了しました。" + fo.getPath());
+		verifyCheckSum(originCheckSum, currentCheckSum);
 	}
 }
