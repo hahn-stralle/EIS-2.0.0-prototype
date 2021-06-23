@@ -54,9 +54,9 @@ public class eis
 	final int CONFIG___INPUT_FILE_LAP_BUFFER_SIZE = 8192;
 	
 	final int CONFIG___PROGRESS_DIVIDE = 100;
-	int CONFIG___PROGRESS_SECTOR;
+	long CONFIG___PROGRESS_SECTOR;
 	int CONFIG___PROGRESS_PERCENT = 0;
-	int CONFIG___PROGRESS_COUNTER = 0;
+	long CONFIG___PROGRESS_COUNTER = 0;
 	
 	final int CONFIG___CHECKSUM_SIZE = 25;
 	
@@ -115,12 +115,11 @@ public class eis
 	{
 		String result = "";
 		String characterCode = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		byte[] hash = getHash(PARAM___BYTE_ARRAY);
 		int calc = 0;
 		
-		for(int byteLap = 0; byteLap < hash.length / 2; byteLap++)
+		for(int byteLap = 0; byteLap < PARAM___BYTE_ARRAY.length; byteLap++)
 		{
-			calc = 512 + hash[byteLap] + hash[byteLap + 1];
+			calc = 512 + PARAM___BYTE_ARRAY[byteLap];
 			calc = calc % characterCode.length();
 			result += characterCode.substring(calc, calc + 1);
 		}
@@ -232,7 +231,7 @@ public class eis
 			case CONFIG___DECRYPT_EIS_COMMAND:
 				CONFIG___INPUT_FILE_PATH = PARAM___COMMAND[2];
 				CONFIG___INPUT_FILE_SIZE = new File(CONFIG___INPUT_FILE_PATH).length();
-				CONFIG___PROGRESS_SECTOR = (int)CONFIG___INPUT_FILE_SIZE / CONFIG___INPUT_FILE_LAP_BUFFER_SIZE / CONFIG___PROGRESS_DIVIDE;
+				CONFIG___PROGRESS_SECTOR = CONFIG___INPUT_FILE_SIZE / CONFIG___INPUT_FILE_LAP_BUFFER_SIZE / CONFIG___PROGRESS_DIVIDE;
 				CONFIG___OUTPUT_DIRECTORY_PATH = getTroupe(CONFIG___EIS_DIRECTORY_PATH + CONFIG___OUtPUt_DIRECTORY_FILE_NAME + CONFIG___OUTPUT_DIRECTORY_FILE_EXTENSION);
 				
 				for(int readLap = 0; readLap < CONFIG___AUTOMATIC_KEY_DATA.length; readLap++)
@@ -260,8 +259,9 @@ public class eis
 	//オートマチックキーの生成。
 	void generateAutomaticKey() throws Exception
 	{
+		byte[] hash = null;
 		File fo = new File(CONFIG___EIS_DIRECTORY_PATH + CONFIG___AUTOMATIC_KEY_FOLDER_NAME);
-		System.out.println(CONFIG___AUTOMATIC_KEY_FOLDER_NAME + "にオートマチックキーを生成します。");
+		System.out.println(fo.getPath() + "にオートマチックキーを生成します。");
 		fileFolderExistence("folder", fo);
 		fo.mkdirs();
 		
@@ -271,17 +271,19 @@ public class eis
 			FileOutputStream fos = new FileOutputStream(fo);
 			BufferedOutputStream bos = new BufferedOutputStream(fos);
 			
+			hash = null;
 			for(int valueLap = 0; valueLap < CONFIG___AUTOMATIC_KEY_DATA[fileLap].length / CONFIG___HASH_RANGE; valueLap++)
 			{
-				bos.write(getHash(getRandomSeed(getRandomNumber(CONFIG___AUTOMATIC_KEY_SEED_RANGE[0],CONFIG___AUTOMATIC_KEY_SEED_RANGE[1]))));
+				hash = getConnectArray(hash, getHash(getRandomSeed(getRandomNumber(CONFIG___AUTOMATIC_KEY_SEED_RANGE[0],CONFIG___AUTOMATIC_KEY_SEED_RANGE[1]))));
 			}
 			
+			bos.write(hash);
 			bos.close();
 			
-			System.out.print("\r" + String.format("%03d", fileLap) + CONFIG___AUTOMATIC_KEY_FILE_EXTENSION);
+			System.out.println(getThirtySixCharacter(getHash(hash)) + ": " + String.format("%03d", fileLap) + CONFIG___AUTOMATIC_KEY_FILE_EXTENSION);
 		}
 		
-		System.out.println("\nオートマチックキーの生成が完了しました。");
+		System.out.println("\rオートマチックキーの生成が完了しました。" + CONFIG___AUTOMATIC_KEY_DATA.length + "File x " + CONFIG___AUTOMATIC_KEY_DATA[0].length + "Volume.");
 	}
 	
 	//進捗状況の表示。
@@ -334,8 +336,6 @@ public class eis
 		bos.write(outputFileExtension);
 		bos.write(timeStamp);
 		bos.write(checkSum);
-		
-		//-------------------------*****-------------------------
 		
 		System.out.print("\r進捗状況, 000%");
 		
@@ -438,8 +438,6 @@ public class eis
 		fileFolderExistence("file", fo);
 		FileOutputStream fos = new FileOutputStream(fo);
 		BufferedOutputStream bos = new BufferedOutputStream(fos);
-		
-		//-------------------------*****-------------------------
 		
 		System.out.print("\r進捗状況, 000%");
 		
